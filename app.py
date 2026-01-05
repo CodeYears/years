@@ -14,21 +14,18 @@ sub = Years()
 
 
 @sub.get("/html")
-async def html(scope, receive, send):
-    response = HTMLResponse("<html><body><h1>Hello, World!</h1></body></html>")
-    await response(scope, send)
+def html():
+    return HTMLResponse("<html><body><h1>Hello, World!</h1></body></html>")
 
 
 @sub.get("/plaintext")
-async def plaintext(scope, receive, send):
-    response = PlainTextResponse("Hello, World!")
-    await response(scope, send)
+def plaintext():
+    return PlainTextResponse("Hello, World!")
 
 
 @sub.get("/json")
-async def json(scope, receive, send):
-    response = JSONResponse({"Hello": "World"})
-    await response(scope, send)
+def json():
+    return JSONResponse({"Hello": "World"})
 
 
 async def slow_numbers(minimum, maximum):
@@ -40,26 +37,24 @@ async def slow_numbers(minimum, maximum):
 
 
 @sub.get("/stream")
-async def stream(scope, receive, send):
+def stream():
     generator = slow_numbers(1, 10)
-    response = StreamingResponse(generator, media_type="text/html")
-    await response(scope, send)
+    return StreamingResponse(generator, media_type="text/html")
 
 
 @sub.get("/file")
-async def file(scope, receive, send):
-    response = FileResponse(
+def file():
+    return FileResponse(
         "statics/1.JPG", media_type="image/jpeg", filename="download.jpg"
     )
-    await response(scope, send)
 
 
-@sub.get("/{username}/{id}/query")
-async def param(scope, receive, send):
-    username = scope["username"]
-    id = scope["id"]
-    response = PlainTextResponse(f"姓名: {username}，学号: {id}")
-    await response(scope, send)
+# @sub.get("/{username}/{id}/query")
+# async def param(scope, receive, send):
+#     username = scope["username"]
+#     id = scope["id"]
+#     response = PlainTextResponse(f"姓名: {username}，学号: {id}")
+#     await response(scope, send)
 
 
 app = Years()
