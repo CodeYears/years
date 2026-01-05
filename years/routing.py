@@ -1,8 +1,23 @@
 import re
 import enum
 import typing
+import asyncio
 
 from years.responses import HTMLResponse
+
+
+def request_response(endpoint: typing.Callable):
+    async def wrapper(scope, receive, send):
+        is_async = asyncio.iscoroutinefunction(endpoint)
+
+        if is_async:
+            response = await endpoint()
+        else:
+            response = await asyncio.to_thread(endpoint)
+
+        await response(scope, send)
+
+    return wrapper
 
 
 class Mathched(enum.Enum):
@@ -28,7 +43,7 @@ class Route(BaseRoute):
             self.methods = ["GET"]
         else:
             self.methods = methods
-        self.endpoint = endpoint
+        self.endpoint = request_response(endpoint)
 
         if not path.endswith("/"):
             path += "/"
@@ -88,7 +103,7 @@ class Mount(BaseRoute):
 
         res = re.match(self.regex, path)
         if res:
-            scope["path"] = path[res.span()[-1]:]
+            scope["path"] = path[res.span()[-1] :]
             return Mathched.FULL, scope
         else:
             return Mathched.PARTICAL, scope
