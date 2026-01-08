@@ -14,17 +14,17 @@ sub = Years()
 
 
 @sub.get("/html")
-def html():
+def html(request):
     return HTMLResponse("<html><body><h1>Hello, World!</h1></body></html>")
 
 
 @sub.get("/plaintext")
-def plaintext():
+def plaintext(request):
     return PlainTextResponse("Hello, World!")
 
 
 @sub.get("/json")
-def json():
+def json(request):
     return JSONResponse({"Hello": "World"})
 
 
@@ -37,13 +37,13 @@ async def slow_numbers(minimum, maximum):
 
 
 @sub.get("/stream")
-def stream():
+def stream(request):
     generator = slow_numbers(1, 10)
     return StreamingResponse(generator, media_type="text/html")
 
 
 @sub.get("/file")
-def file():
+def file(request):
     return FileResponse(
         "statics/1.JPG", media_type="image/jpeg", filename="download.jpg"
     )
@@ -55,6 +55,13 @@ def file():
 #     id = scope["id"]
 #     response = PlainTextResponse(f"姓名: {username}，学号: {id}")
 #     await response(scope, send)
+
+
+@sub.get("/request")
+def request(request):
+    type = request["type"]
+    method = request.method
+    return JSONResponse(dict(type=type, method=method))
 
 
 app = Years()

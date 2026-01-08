@@ -4,16 +4,18 @@ import typing
 import asyncio
 
 from years.responses import HTMLResponse
+from years.requests import Request
 
 
 def request_response(endpoint: typing.Callable):
     async def wrapper(scope, receive, send):
         is_async = asyncio.iscoroutinefunction(endpoint)
+        request = Request(scope, receive)
 
         if is_async:
-            response = await endpoint()
+            response = await endpoint(request)
         else:
-            response = await asyncio.to_thread(endpoint)
+            response = await asyncio.to_thread(endpoint, request)
 
         await response(scope, send)
 
