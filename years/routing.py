@@ -67,10 +67,14 @@ class Route(BaseRoute):
         res = re.fullmatch(self.regex, path)
         if res:
             if scope["method"] in self.methods:
-                scope.update(res.groupdict())
+                if "path_params" not in scope:
+                    scope["path_params"] = {}
+                scope["path_params"].update(res.groupdict())
                 return Mathched.FULL, scope
             else:
-                scope.update(res.groupdict())
+                if "path_params" not in scope:
+                    scope["path_params"] = {}
+                scope["path_params"].update(res.groupdict())
                 return Mathched.PARTICAL, scope
 
         return Mathched.NONE, {}

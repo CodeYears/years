@@ -50,12 +50,11 @@ def file(request):
     )
 
 
-# @sub.get("/{username}/{id}/query")
-# async def param(scope, receive, send):
-#     username = scope["username"]
-#     id = scope["id"]
-#     response = PlainTextResponse(f"姓名: {username}，学号: {id}")
-#     await response(scope, send)
+@sub.get("/{username}/{id}/query")
+def param(request: Request):
+    username = request.path_params["username"]
+    id = request.path_params["id"]
+    return PlainTextResponse(f"姓名: {username}，学号: {id}")
 
 
 @sub.get("/request")

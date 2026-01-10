@@ -31,3 +31,7 @@ class Request(Mapping):
         if not hasattr(self, "_headers"):
             self._headers = Hearders(self._scope["headers"])
         return self._headers
+
+    @property
+    def path_params(self):
+        return self._scope["path_params"]
