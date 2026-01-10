@@ -1,6 +1,5 @@
 from collections.abc import Mapping
-from urllib.parse import parse_qs
-from years.datastructers import Hearders
+from years.datastructers import Hearders, QueryParams
 
 
 class Request(Mapping):
@@ -24,7 +23,7 @@ class Request(Mapping):
     @property
     def query_params(self):
         if not hasattr(self, "_query_params"):
-            self._query_params = parse_qs(self._scope["query_string"])
+            self._query_params = QueryParams(self._scope["query_string"])
         return self._query_params
 
     @property

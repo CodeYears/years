@@ -68,13 +68,13 @@ def request(request):
 @sub.get("/request2")
 def request2(request: Request):
     """验证 Headers 是否正常"""
-    return JSONResponse(dict(headers=request.headers.dump()))
+    return JSONResponse(request.headers)
 
 
 @sub.get("/request3")
 def request3(request: Request):
     """验证查询参数是否正常解析"""
-    return PlainTextResponse(str(request.query_params))
+    return JSONResponse(request.query_params)
 
 
 app = Years()
