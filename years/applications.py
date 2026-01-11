@@ -8,9 +8,26 @@ class Years:
         else:
             self.router = Router()
 
+    def route(self, path: str, methods=None):
+        if methods is None:
+            methods = ["GET"]
+
+        def decorate(endpoint):
+            route = Route(path, endpoint, methods=methods)
+            self.router.add_route(route)
+
+        return decorate
+
     def get(self, path: str):
         def decorate(endpoint):
             route = Route(path, endpoint, methods=["GET"])
+            self.router.add_route(route)
+
+        return decorate
+
+    def post(self, path: str):
+        def decorate(endpoint):
+            route = Route(path, endpoint, methods=["POST"])
             self.router.add_route(route)
 
         return decorate

@@ -6,6 +6,7 @@ class Request(Mapping):
     def __init__(self, scope, receive):
         self._scope = scope
         self._receive = receive
+        self.customed = False
 
     def __getitem__(self, key):
         return self._scope[key]
@@ -43,3 +44,13 @@ class Request(Mapping):
     @property
     def path_params(self):
         return self._scope["path_params"]
+
+    async def stream(self):
+        if self.customed:
+            raise RuntimeError("该请求体的数据已被消费")
+
+        while True:
+            current = await self._receive()
+            yield current["body"]
+            if not current["more_body"]:
+                break

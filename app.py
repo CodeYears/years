@@ -14,18 +14,18 @@ from years import Years
 sub = Years()
 
 
-@sub.get("/html")
-def html(request):
+@sub.route("/html", methods=["GET", "POST"])
+async def html(request):
     return HTMLResponse("<html><body><h1>Hello, World!</h1></body></html>")
 
 
 @sub.get("/plaintext")
-def plaintext(request):
+async def plaintext(request):
     return PlainTextResponse("Hello, World!")
 
 
 @sub.get("/json")
-def json(request):
+async def json(request):
     return JSONResponse({"Hello": "World"})
 
 
@@ -44,7 +44,7 @@ def stream(request):
 
 
 @sub.get("/file")
-def file(request):
+async def file(request):
     return FileResponse(
         "statics/1.JPG", media_type="image/jpeg", filename="download.jpg"
     )
@@ -65,13 +65,13 @@ def request(request):
 
 
 @sub.get("/request2")
-def request2(request: Request):
+async def request2(request: Request):
     """验证 Headers 是否正常"""
     return JSONResponse(request.headers)
 
 
 @sub.get("/request3")
-def request3(request: Request):
+async def request3(request: Request):
     """验证查询参数是否正常解析"""
     return JSONResponse(request.query_params)
 
@@ -81,6 +81,11 @@ async def request4(request: Request):
     host, port = request.url.host, request.url.port
     path = request.url.path
     return JSONResponse(dict(host=host, port=port, path=path))
+
+
+@sub.post("/read_file")
+async def read_file(request: Request):
+    return StreamingResponse(request.stream(), media_type="text/html")
 
 
 app = Years()

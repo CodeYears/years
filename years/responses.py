@@ -61,10 +61,13 @@ class StreamingResponse(Response):
         )
 
         async for chunk in self.streamio:
+            if isinstance(chunk, str):
+                chunk = chunk.encode()
+
             await send(
                 {
                     "type": "http.response.body",
-                    "body": chunk.encode(),
+                    "body": chunk,
                     "more_body": True,
                 }
             )
