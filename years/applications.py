@@ -1,12 +1,23 @@
 from years.routing import Router, Route, Mount
+from years.debug import DebugMiddleware
 
 
 class Years:
     def __init__(self, router: Router = None):
+        self._debug = False
         if router:
             self.router = router
         else:
             self.router = Router()
+
+    @property
+    def debug(self):
+        return self._debug
+
+    @debug.setter
+    def debug(self, is_debug: bool):
+        if is_debug:
+            self.router = DebugMiddleware(self.router)
 
     def route(self, path: str, methods=None):
         if methods is None:

@@ -10,7 +10,6 @@ from years.requests import Request
 
 from years import Years
 
-
 sub = Years()
 
 
@@ -88,9 +87,16 @@ async def read_file(request: Request):
     return StreamingResponse(request.stream(), media_type="text/html")
 
 
+@sub.get("/debug")
+async def debug(request: Request):
+    result = 1 / 0
+    return PlainTextResponse(result)
+
 app = Years()
 
 app.mount("/sub/{name}", sub)
+
+app.debug = True
 
 
 if __name__ == "__main__":
