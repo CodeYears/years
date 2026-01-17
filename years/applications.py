@@ -1,26 +1,25 @@
 from contextlib import AsyncExitStack
 from years.routing import Router, Route, Mount
-from years.debug import DebugMiddleware
+from years.exceptions import ExceptionMiddleware
 from years.endpoint import Endpoint
 
 
 class Years:
-    def __init__(self, router: Router = None, lifespan=None):
-        self._debug = False
+    def __init__(
+        self,
+        router: Router = None,
+        lifespan=None,
+        debug: bool = False,
+        exception_handlers: dict = None,
+    ):
+        self.debug = debug
         self.lifespan = lifespan
         if router:
             self.router = router
         else:
             self.router = Router()
 
-    @property
-    def debug(self):
-        return self._debug
-
-    @debug.setter
-    def debug(self, is_debug: bool):
-        if is_debug:
-            self.router = DebugMiddleware(self.router)
+        self.exception_handlers = exception_handlers or {}
 
     def route(self, path: str, methods=None):
         if methods is None:
@@ -75,6 +74,9 @@ class Years:
                 return
 
     async def __call__(self, scope, receive, send):
+        if self.debug:
+            self.router = ExceptionMiddleware(self.router, self.exception_handlers)
+
         if scope["type"] == "lifespan":
             await self.run_lifespan(scope, receive, send)
         else:

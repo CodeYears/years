@@ -4,8 +4,8 @@ import typing
 import asyncio
 import inspect
 
-from years.responses import HTMLResponse
 from years.requests import Request
+from years.exceptions import HTTPException
 
 
 def request_response(endpoint: typing.Callable):
@@ -149,8 +149,6 @@ class Router:
 
         else:
             if self.partical:
-                response = HTMLResponse("方法不匹配", status_code=405)
+                raise HTTPException(405, "方法不匹配")
             else:
-                response = HTMLResponse("路径找不到", status_code=404)
-
-            await response(scope, send)
+                raise HTTPException(404, "路径找不到")

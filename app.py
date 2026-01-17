@@ -11,6 +11,7 @@ from years.requests import Request
 from years.endpoint import Endpoint
 from years.background import BackgroundTask
 from years import Years
+from years.exceptions import HTTPException
 
 
 @asynccontextmanager
@@ -20,7 +21,18 @@ async def lifespan():
     print("收到 shutdown 事件，清理工作开始...")
 
 
-sub = Years()
+async def not_found(request: Request, exc: HTTPException):
+    return HTMLResponse(content="路径找不到", status_code=exc.status_code)
+
+
+async def method_not_matched(request: Request, exc: HTTPException):
+    return HTMLResponse(content="方法不匹配", status_code=exc.status_code)
+
+
+exception_handlers = {404: not_found, 405: method_not_matched}
+
+
+sub = Years(debug=True, exception_handlers=exception_handlers)
 
 
 @sub.route("/html", methods=["GET", "POST"])
@@ -122,7 +134,7 @@ async def background_task(request: Request):
     return PlainTextResponse("Response complete!", background_task=background_task)
 
 
-app = Years(lifespan=lifespan)
+app = Years(lifespan=lifespan, debug=True)
 
 app.mount("/sub/{name}", sub)
 app.debug = False
