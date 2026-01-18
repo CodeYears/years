@@ -12,15 +12,15 @@ async def test_request_url():
         response = JSONResponse(data)
         await response(scope, receive, send)
 
-    async with TestClient(app) as client:
-        response = await client.get("/123?a=abc")
-        assert response.json() == {
-            "method": "GET",
-            "url": "http://testserver/123?a=abc",
-        }
+    client = TestClient(app)
+    response = await client.get("/123?a=abc")
+    assert response.json() == {
+        "method": "GET",
+        "url": "http://testserver/123?a=abc",
+    }
 
-        response = await client.get("https://example.org:123/")
-        assert response.json() == {"method": "GET", "url": "https://example.org:123/"}
+    response = await client.get("https://example.org:123/")
+    assert response.json() == {"method": "GET", "url": "https://example.org:123/"}
 
 
 @pytest.mark.asyncio
@@ -31,9 +31,9 @@ async def test_request_query_params():
         response = JSONResponse({"params": params})
         await response(scope, receive, send)
 
-    async with TestClient(app) as client:
-        response = await client.get("/?a=123&b=456")
-        assert response.json() == {"params": {"a": "123", "b": "456"}}
+    client = TestClient(app)
+    response = await client.get("/?a=123&b=456")
+    assert response.json() == {"params": {"a": "123", "b": "456"}}
 
 
 @pytest.mark.asyncio
@@ -43,17 +43,17 @@ async def test_request_headers():
         response = JSONResponse({"headers": dict(request.headers)})
         await response(scope, receive, send)
 
-    async with TestClient(app) as client:
-        response = await client.get("/", headers={"host": "example.org"})
-        assert response.json() == {
-            "headers": {
-                "accept": "*/*",
-                "accept-encoding": "gzip, deflate",
-                "connection": "keep-alive",
-                "user-agent": "python-httpx/0.28.1",
-                "host": "example.org",
-            }
+    client = TestClient(app)
+    response = await client.get("/", headers={"host": "example.org"})
+    assert response.json() == {
+        "headers": {
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate",
+            "connection": "keep-alive",
+            "user-agent": "python-httpx/0.28.1",
+            "host": "example.org",
         }
+    }
 
 
 @pytest.mark.asyncio
