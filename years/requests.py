@@ -1,3 +1,4 @@
+from urllib.parse import parse_qs
 from collections.abc import Mapping
 from years.datastructers import Hearders, QueryParams, URL
 
@@ -46,8 +47,14 @@ class Request(Mapping):
         return self._scope["path_params"]
 
     async def stream(self):
+        if hasattr(self, "_body"):
+            yield self._body
+            return
+
         if self.customed:
             raise RuntimeError("该请求体的数据已被消费")
+
+        self.customed = True
 
         while True:
             current = await self._receive()
@@ -57,8 +64,14 @@ class Request(Mapping):
 
     async def body(self) -> bytes:
         if not hasattr(self, "_body"):
-            self._body = b""
+            _body = b""
             async for chunk in self.stream():
-                self._body += chunk
+                _body += chunk
 
+            self._body = _body
         return self._body
+
+    async def form(self):
+        raw_data = await self.body()
+        data = parse_qs(raw_data)
+        return {k.decode(): v[-1].decode() for k, v in data.items()}
