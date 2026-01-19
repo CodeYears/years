@@ -74,3 +74,56 @@ async def test_request_body():
 
     response = await client.post("/", content="abc")
     assert response.json() == {"body": "abc"}
+
+
+@pytest.mark.asyncio
+async def test_request_stream():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        body = b""
+        async for chunk in request.stream():
+            body += chunk
+        response = JSONResponse({"body": body.decode()})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+
+    response = await client.get("/")
+    assert response.json() == {"body": ""}
+
+    response = await client.post("/", json={"a": "123"})
+    assert response.json() == {"body": '{"a":"123"}'}
+
+    response = await client.post("/", content="abc")
+    assert response.json() == {"body": "abc"}
+
+
+@pytest.mark.asyncio
+async def test_request_form_urlencoded():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        form = await request.form()
+        response = JSONResponse({"form": dict(form)})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+
+    response = await client.post("/", data={"abc": "123 @"})
+    assert response.json() == {"form": {"abc": "123 @"}}
+
+
+@pytest.mark.asyncio
+async def test_request_body_then_stream():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        body = await request.body()
+        chunks = b""
+        async for chunk in request.stream():
+            chunks += chunk
+        response = JSONResponse({"body": body.decode(), "stream": chunks.decode()})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+
+    response = await client.post("/", content="abc")
+    assert response.json() == {"body": "abc", "stream": "abc"}
