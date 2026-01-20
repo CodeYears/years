@@ -127,3 +127,48 @@ async def test_request_body_then_stream():
 
     response = await client.post("/", content="abc")
     assert response.json() == {"body": "abc", "stream": "abc"}
+
+
+@pytest.mark.asyncio
+async def test_request_json():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        data = await request.json()
+        response = JSONResponse({"json": data})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+    response = await client.post("/", json={"a": "123"})
+    assert response.json() == {"json": {"a": "123"}}
+
+
+def test_request_scope_interface():
+    """
+    A Request can be instantiated with a scope, and presents a `Mapping`
+    interface.
+    """
+    request = Request({"type": "http", "method": "GET", "path": "/abc/"})
+    assert request["method"] == "GET"
+    assert dict(request) == {"type": "http", "method": "GET", "path": "/abc/"}
+    assert len(request) == 3
+
+
+@pytest.mark.asyncio
+async def test_request_without_setting_receive():
+    """
+    If Request is instantiated without the receive channel, then .body()
+    is not available.
+    """
+
+    async def app(scope, receive, send):
+        request = Request(scope)
+        try:
+            data = await request.json()
+        except RuntimeError:
+            data = "Receive channel not available"
+        response = JSONResponse({"json": data})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+    response = await client.post("/", json={"a": "123"})
+    assert response.json() == {"json": "Receive channel not available"}

@@ -1,10 +1,11 @@
+import json
 from urllib.parse import parse_qs
 from collections.abc import Mapping
 from years.datastructers import Hearders, QueryParams, URL
 
 
 class Request(Mapping):
-    def __init__(self, scope, receive):
+    def __init__(self, scope, receive=None):
         self._scope = scope
         self._receive = receive
         self.customed = False
@@ -54,6 +55,9 @@ class Request(Mapping):
         if self.customed:
             raise RuntimeError("该请求体的数据已被消费")
 
+        if self._receive is None:
+            raise RuntimeError("请求体接受通道未传入")
+
         self.customed = True
 
         while True:
@@ -75,3 +79,7 @@ class Request(Mapping):
         raw_data = await self.body()
         data = parse_qs(raw_data)
         return {k.decode(): v[-1].decode() for k, v in data.items()}
+
+    async def json(self):
+        raw_data = await self.body()
+        return json.loads(raw_data)
