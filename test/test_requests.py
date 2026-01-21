@@ -2,6 +2,7 @@ import pytest
 
 from years import Request, JSONResponse
 from years.testclient import TestClient
+from years.requests import ClientDisconnect
 
 
 @pytest.mark.asyncio
@@ -172,3 +173,22 @@ async def test_request_without_setting_receive():
     client = TestClient(app)
     response = await client.post("/", json={"a": "123"})
     assert response.json() == {"json": "Receive channel not available"}
+
+
+@pytest.mark.asyncio
+async def test_request_disconnect():
+    """
+    If a client disconnect occurs while reading request body
+    then ClientDisconnect should be raised.
+    """
+
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        await request.body()
+
+    async def receiver():
+        return {"type": "http.disconnect"}
+
+    scope = {"type": "http", "method": "POST", "path": "/"}
+    with pytest.raises(ClientDisconnect):
+        await app(scope, receiver, None)
