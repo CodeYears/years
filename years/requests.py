@@ -4,6 +4,10 @@ from collections.abc import Mapping
 from years.datastructers import Hearders, QueryParams, URL
 
 
+class ClientDisconnect(Exception):
+    """客户端断开连接异常"""
+
+
 class Request(Mapping):
     def __init__(self, scope, receive=None):
         self._scope = scope
@@ -62,9 +66,13 @@ class Request(Mapping):
 
         while True:
             current = await self._receive()
-            yield current["body"]
-            if not current["more_body"]:
-                break
+            if current["type"] == "http.request":
+                yield current["body"]
+                if not current["more_body"]:
+                    break
+
+            if current["type"] == "http.disconnect":
+                raise ClientDisconnect()
 
     async def body(self) -> bytes:
         if not hasattr(self, "_body"):
