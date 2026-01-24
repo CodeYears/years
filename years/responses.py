@@ -2,6 +2,8 @@ import json
 import hashlib
 import aiofiles
 
+from years.datastructers import Hearders
+
 
 class Response:
     media_type = None
@@ -18,6 +20,11 @@ class Response:
         if media_type:
             self.media_type = media_type
         self.background_task = background_task
+
+    def init_headers(self):
+        self.headers = Hearders()
+
+    def set_cookie(self, key, value):
 
     async def __call__(self, scope, receive, send):
         await send(

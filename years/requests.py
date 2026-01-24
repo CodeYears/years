@@ -1,11 +1,15 @@
 import json
 from urllib.parse import parse_qs
 from collections.abc import Mapping
-from years.datastructers import Hearders, QueryParams, URL
+from years.datastructers import Hearders, QueryParams, URL, Cookie
 
 
 class ClientDisconnect(Exception):
     """客户端断开连接异常"""
+
+
+class State:
+    """用户自己设置的状态"""
 
 
 class Request(Mapping):
@@ -28,12 +32,25 @@ class Request(Mapping):
         return self["method"]
 
     @property
+    def state(self):
+        if "state" not in self._scope:
+            self._scope["state"] = State()
+
+        return self._scope["state"]
+
+    @property
     def url(self) -> URL:
         if not hasattr(self, "_url"):
-            url = URL(self._scope)
-            self._url = url
+            self._url = URL(self._scope)
 
         return self._url
+
+    @property
+    def cookies(self):
+        if not hasattr(self, "_cookies"):
+            self._cookies = Cookie(self.headers.get("cookie"))
+
+        return self._cookies
 
     @property
     def query_params(self):
@@ -59,7 +76,7 @@ class Request(Mapping):
         if self.customed:
             raise RuntimeError("该请求体的数据已被消费")
 
-        if self._receive is None:
+        if not self._receive:
             raise RuntimeError("请求体接受通道未传入")
 
         self.customed = True

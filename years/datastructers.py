@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from urllib.parse import parse_qsl, unquote, urlparse
 
 
@@ -101,3 +101,26 @@ class QueryParams(Mapping):
 
     def __iter__(self):
         return iter(self._query_params)
+
+
+class Cookie(MutableMapping):
+    def __init__(self, cookies: str = None):
+        if cookies:
+            self._cookie = {k: v for k, v in cookies.split(";")}
+        else:
+            self._cookie = {}
+
+    def __iter__(self):
+        return iter(self._cookie)
+
+    def __len__(self):
+        return len(self._cookie)
+
+    def __getitem__(self, key):
+        return self._cookie[key]
+
+    def __setitem__(self, key, value):
+        self._cookie[key] = value
+
+    def __delitem__(self, key):
+        del self._cookie[key]
