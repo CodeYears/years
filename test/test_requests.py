@@ -226,3 +226,23 @@ async def test_request_cookies():
     assert response.text == "Hello, world!"
     response = await client.get("/")
     assert response.text == "Hello, cookies!"
+
+
+@pytest.mark.asyncio
+async def test_chunked_encoding():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        body = await request.body()
+        response = JSONResponse({"body": body.decode()})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+
+    async def post_body():
+        yield b"foo"
+        yield "bar"
+
+    response = await client.post("/", content=post_body())
+
+    assert response.status_code == 200
+    assert response.json() == {"body": "foobar"}

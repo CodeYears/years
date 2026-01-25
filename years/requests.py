@@ -95,7 +95,10 @@ class Request(Mapping):
         if not hasattr(self, "_body"):
             _body = b""
             async for chunk in self.stream():
-                _body += chunk
+                if isinstance(chunk, bytes):
+                    _body += chunk
+                else:
+                    _body += chunk.encode()
 
             self._body = _body
         return self._body
