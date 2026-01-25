@@ -3,6 +3,7 @@ import pytest
 from years import Request, JSONResponse
 from years.testclient import TestClient
 from years.requests import ClientDisconnect
+from years.responses import Response
 
 
 @pytest.mark.asyncio
@@ -192,3 +193,36 @@ async def test_request_disconnect():
     scope = {"type": "http", "method": "POST", "path": "/"}
     with pytest.raises(ClientDisconnect):
         await app(scope, receiver, None)
+
+
+@pytest.mark.asyncio
+async def test_request_state():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        request.state.example = 123
+        response = JSONResponse({"state.example": request["state"].example})
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+    response = await client.get("/123?a=abc")
+    assert response.json() == {"state.example": 123}
+
+
+@pytest.mark.asyncio
+async def test_request_cookies():
+    async def app(scope, receive, send):
+        request = Request(scope, receive)
+        mycookie = request.cookies.get("mycookie")
+        if mycookie:
+            response = Response(mycookie, media_type="text/plain")
+        else:
+            response = Response("Hello, world!", media_type="text/plain")
+            response.set_cookie("mycookie", "Hello, cookies!")
+
+        await response(scope, receive, send)
+
+    client = TestClient(app)
+    response = await client.get("/")
+    assert response.text == "Hello, world!"
+    response = await client.get("/")
+    assert response.text == "Hello, cookies!"
