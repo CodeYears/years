@@ -1,3 +1,4 @@
+from collections import defaultdict
 from collections.abc import Mapping, MutableMapping
 from urllib.parse import parse_qsl, unquote, urlparse
 
@@ -63,25 +64,45 @@ class URL:
         return self.components.netloc
 
 
-class Hearders(Mapping):
-    def __init__(self, hearders: list):
-        self._headers = hearders
+class Hearders(MutableMapping):
+    def __init__(self, headers: list = None):
+        self.raw_headers = self._init_headers(headers or [])
 
-    def __getitem__(self, key: str):
-        for hearder_key, hearder_value in self._headers:
-            if hearder_key.decode("latin-1").lower() == key.lower():
-                return hearder_value.decode("latin-1").lower()
-        raise KeyError(f"Headers 中不存在{key.lower()}")
+    def _init_headers(self, headers):
+        raw_headers = defaultdict(list)
+        for key, value in headers:
+            key, value = key.decode("latin-1").lower(), value.decode()
+            raw_headers[key].append(value)
+
+        return raw_headers
 
     def __len__(self):
-        return len(self._headers)
+        return len(self.raw_headers)
+
+    def __getitem__(self, key):
+        values = self.raw_headers[key]
+        return values[-1] if values else None
 
     def __iter__(self):
-        for key, _ in self._headers:
-            yield key.decode("latin-1")
+        return iter(self.raw_headers)
 
-    def dump(self):
-        return dict(self)
+    def __setitem__(self, key, value):
+        self.raw_headers[key].append(value)
+
+    def __delitem__(self, key):
+        del self.raw_headers[key]
+
+    def get_last(self, key):
+        values = self.get(key)
+        return values[-1] if values else None
+
+    def get_list(self):
+        results = []
+        for key, values in self.raw_headers.items():
+            for value in values:
+                results.append([key.encode(), value.encode()])
+
+        return results
 
 
 class QueryParams(Mapping):
@@ -106,7 +127,7 @@ class QueryParams(Mapping):
 class Cookie(MutableMapping):
     def __init__(self, cookies: str = None):
         if cookies:
-            self._cookie = {k: v for k, v in cookies.split(";")}
+            self._cookie = {cookies.split("=")[0]: cookies.split("=")[1]}
         else:
             self._cookie = {}
 

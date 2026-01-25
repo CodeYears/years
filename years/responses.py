@@ -21,19 +21,23 @@ class Response:
             self.media_type = media_type
         self.background_task = background_task
 
-    def init_headers(self):
+        # 实例化 headers 要放到上面，因为 init_headers 方法有可能会被重载
         self.headers = Hearders()
+        self.init_headers()
+
+    def init_headers(self):
+        if self.media_type:
+            self.headers["Content-Type"] = f"{self.media_type}; charset=utf-8"
 
     def set_cookie(self, key, value):
+        self.headers.raw_headers["Set-Cookie"].append(f"{key}={value}")
 
     async def __call__(self, scope, receive, send):
         await send(
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    [b"Content-Type", f"{self.media_type}; charset=utf-8".encode()]
-                ],
+                "headers": self.headers.get_list(),
             }
         )
 
@@ -67,15 +71,15 @@ class StreamingResponse(Response):
         if media_type:
             self.media_type = media_type
         self.background_task = background_task
+        self.headers = Hearders()
+        self.init_headers()
 
     async def __call__(self, scope, receive, send):
         await send(
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    [b"Content-Type", f"{self.media_type}; charset=utf-8".encode()]
-                ],
+                "headers": self.headers.get_list(),
             }
         )
 
@@ -112,6 +116,7 @@ class FileResponse(Response):
         if filename:
             self.filename = filename
         self.background_task = background_task
+        self.headers = Hearders()
 
     async def __call__(self, scope, receive, send):
         async with aiofiles.open(self.path, mode="rb") as fp:
