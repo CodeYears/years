@@ -1,5 +1,6 @@
 import typing
 import asyncio
+import inspect
 
 
 class BackgroundTask:
@@ -14,7 +15,7 @@ class BackgroundTask:
     async def __call__(self):
         for task in self.tasks:
             func, args, kwargs = task
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 await func(*args, **kwargs)
             else:
                 await asyncio.to_thread(func, *args, **kwargs)

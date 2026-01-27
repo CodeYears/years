@@ -13,13 +13,13 @@ class Response:
         content: str,
         status_code: int = 200,
         media_type: str = None,
-        background_task=None,
+        background=None,
     ):
         self.status_code = status_code
         self.content = content
         if media_type:
             self.media_type = media_type
-        self.background_task = background_task
+        self.background = background
 
         # 实例化 headers 要放到上面，因为 init_headers 方法有可能会被重载
         self.headers = Hearders()
@@ -41,9 +41,14 @@ class Response:
             }
         )
 
-        await send({"type": "http.response.body", "body": self.content.encode("utf-8")})
-        if self.background_task:
-            await self.background_task()
+        if isinstance(self.content, bytes):
+            body = self.content
+        else:
+            body = self.content.encode("utf-8")
+
+        await send({"type": "http.response.body", "body": body})
+        if self.background:
+            await self.background()
 
 
 class HTMLResponse(Response):
@@ -64,13 +69,13 @@ class JSONResponse(Response):
 
 class StreamingResponse(Response):
     def __init__(
-        self, streamio, status_code: int = 200, media_type=None, background_task=None
+        self, streamio, status_code: int = 200, media_type=None, background=None
     ):
         self.streamio = streamio
         self.status_code = status_code
         if media_type:
             self.media_type = media_type
-        self.background_task = background_task
+        self.background = background
         self.headers = Hearders()
         self.init_headers()
 
@@ -83,6 +88,7 @@ class StreamingResponse(Response):
             }
         )
 
+        # 你这里相当于用户只能传异步生成器，不可以传同步生成器的
         async for chunk in self.streamio:
             if isinstance(chunk, str):
                 chunk = chunk.encode()
@@ -96,8 +102,8 @@ class StreamingResponse(Response):
             )
 
         await send({"type": "http.response.body"})
-        if self.background_task:
-            await self.background_task()
+        if self.background:
+            await self.background()
 
 
 class FileResponse(Response):
@@ -107,7 +113,7 @@ class FileResponse(Response):
         status_code: int = 200,
         media_type=None,
         filename: str = None,
-        background_task=None,
+        background=None,
     ):
         self.status_code = status_code
         self.path = path
@@ -115,7 +121,7 @@ class FileResponse(Response):
             self.media_type = media_type
         if filename:
             self.filename = filename
-        self.background_task = background_task
+        self.background = background
         self.headers = Hearders()
 
     async def __call__(self, scope, receive, send):
@@ -142,5 +148,5 @@ class FileResponse(Response):
             await send(start)
 
         await send({"type": "http.response.body", "body": content})
-        if self.background_task:
-            await self.background_task()
+        if self.background:
+            await self.background()
