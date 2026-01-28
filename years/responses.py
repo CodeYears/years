@@ -1,6 +1,9 @@
 import json
 import hashlib
 import aiofiles
+import mimetypes
+import pathlib
+from email.utils import formatdate
 
 from years.datastructers import Hearders
 
@@ -14,6 +17,7 @@ class Response:
         status_code: int = 200,
         media_type: str = None,
         background=None,
+        headers=None,
     ):
         self.status_code = status_code
         self.content = content
@@ -22,7 +26,7 @@ class Response:
         self.background = background
 
         # 实例化 headers 要放到上面，因为 init_headers 方法有可能会被重载
-        self.headers = Hearders()
+        self.headers = Hearders(headers)
         self.init_headers()
 
     def init_headers(self):
@@ -69,14 +73,19 @@ class JSONResponse(Response):
 
 class StreamingResponse(Response):
     def __init__(
-        self, streamio, status_code: int = 200, media_type=None, background=None
+        self,
+        streamio,
+        status_code: int = 200,
+        media_type=None,
+        background=None,
+        headers=None,
     ):
         self.streamio = streamio
         self.status_code = status_code
         if media_type:
             self.media_type = media_type
         self.background = background
-        self.headers = Hearders()
+        self.headers = Hearders(headers)
         self.init_headers()
 
     async def __call__(self, scope, receive, send):
@@ -114,6 +123,7 @@ class FileResponse(Response):
         media_type=None,
         filename: str = None,
         background=None,
+        headers=None,
     ):
         self.status_code = status_code
         self.path = path
@@ -122,29 +132,36 @@ class FileResponse(Response):
         if filename:
             self.filename = filename
         self.background = background
-        self.headers = Hearders()
+        self.headers = Hearders(headers)
+        self.init_headers()
+
+    def init_headers(self):
+        if self.media_type:
+            self.headers["Content-Type"] = f"{self.media_type}; charset=utf-8"
+        else:
+            mime_type, charset = mimetypes.guess_type(self.filename)
+            self.headers["Content-Type"] = f"{mime_type}"
+
+        if self.filename:
+            self.headers["Content-Disposition"] = (
+                f'attachment; filename="{self.filename}"'
+            )
+
+        mtime = pathlib.Path(self.path).stat().st_mtime
+        self.headers["Last-Modified"] = formatdate(mtime, usegmt=True)
 
     async def __call__(self, scope, receive, send):
         async with aiofiles.open(self.path, mode="rb") as fp:
             content = await fp.read()
 
+            self.headers["Etag"] = hashlib.md5(content).hexdigest()
+            self.headers["Content-Length"] = str(len(content))
+
             start = {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    [b"Content-Type", f"{self.media_type}".encode()],
-                    [b"Content-Length", str(len(content)).encode()],
-                    [b"ETag", hashlib.md5(content).hexdigest().encode()],
-                ],
+                "headers": self.headers.get_list(),
             }
-
-            if hasattr(self, "filename"):
-                start["headers"].append(
-                    [
-                        b"Content-Disposition",
-                        f'attachment; filename="{self.filename}'.encode(),
-                    ]
-                )
             await send(start)
 
         await send({"type": "http.response.body", "body": content})
