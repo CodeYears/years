@@ -65,14 +65,25 @@ class URL:
 
 
 class Hearders(MutableMapping):
-    def __init__(self, headers: list = None):
-        self.raw_headers = self._init_headers(headers or [])
+    def __init__(self, headers: list | dict = None):
+        """headers不止可以从 ASGI 框架传过来的列表构建
+        也可以从字典接口构建"""
+        self.raw_headers = self._init_headers(headers)
 
     def _init_headers(self, headers):
         raw_headers = defaultdict(list)
-        for key, value in headers:
-            key, value = key.decode("latin-1").lower(), value.decode()
-            raw_headers[key].append(value)
+
+        if isinstance(headers, list):
+            for key, value in headers:
+                key, value = key.decode("latin-1").lower(), value.decode()
+                raw_headers[key].append(value)
+
+        elif isinstance(headers, dict):
+            for key, value in headers.items():
+                if isinstance(key, bytes):
+                    key = key.decode("latin-1")
+
+                raw_headers[key.lower()].append(value)
 
         return raw_headers
 
@@ -87,6 +98,9 @@ class Hearders(MutableMapping):
         return iter(self.raw_headers)
 
     def __setitem__(self, key, value):
+        self.raw_headers[key] = [value]
+
+    def append(self, key, value):
         self.raw_headers[key].append(value)
 
     def __delitem__(self, key):
