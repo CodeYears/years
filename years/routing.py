@@ -21,7 +21,7 @@ def request_response(endpoint: typing.Callable):
         else:
             response = await asyncio.to_thread(endpoint, request)
 
-        await response(scope, send)
+        await response(scope, receive, send)
 
     return wrapper
 
@@ -129,6 +129,16 @@ class Router:
     def __init__(self, routes: list[Route] = None):
         self.routes = routes or []
         self.partical = False
+
+    def route(self, path: str, methods=None):
+        if methods is None:
+            methods = ["GET"]
+
+        def decorate(endpoint):
+            route = Route(path, endpoint, methods=methods)
+            self.add_route(route)
+
+        return decorate
 
     def add_route(self, route: Route):
         self.routes.append(route)
