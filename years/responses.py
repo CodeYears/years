@@ -33,8 +33,14 @@ class Response:
         if self.media_type:
             self.headers["Content-Type"] = f"{self.media_type}; charset=utf-8"
 
+        if hasattr(self, "content"):
+            self.headers["Content-Length"] = str(len(self.content))
+
     def set_cookie(self, key, value):
         self.headers.raw_headers["Set-Cookie"].append(f"{key}={value}")
+
+    def delete_cookie(self, key):
+        self.headers.raw_headers["Set-Cookie"] = []
 
     async def __call__(self, scope, receive, send):
         await send(
@@ -147,22 +153,27 @@ class FileResponse(Response):
                 f'attachment; filename="{self.filename}"'
             )
 
-        mtime = pathlib.Path(self.path).stat().st_mtime
-        self.headers["Last-Modified"] = formatdate(mtime, usegmt=True)
-
     async def __call__(self, scope, receive, send):
-        async with aiofiles.open(self.path, mode="rb") as fp:
-            content = await fp.read()
+        try:
+            async with aiofiles.open(self.path, mode="rb") as fp:
+                content = await fp.read()
 
-            self.headers["Etag"] = hashlib.md5(content).hexdigest()
-            self.headers["Content-Length"] = str(len(content))
+                self.headers["Etag"] = hashlib.md5(content).hexdigest()
+                self.headers["Content-Length"] = str(len(content))
+                mtime = pathlib.Path(self.path).stat().st_mtime
+                self.headers["Last-Modified"] = formatdate(mtime, usegmt=True)
 
-            start = {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.headers.get_list(),
-            }
-            await send(start)
+                start = {
+                    "type": "http.response.start",
+                    "status": self.status_code,
+                    "headers": self.headers.get_list(),
+                }
+                await send(start)
+        except IsADirectoryError:
+            raise RuntimeError(f"{self.path} is not a file")
+
+        except FileNotFoundError:
+            raise RuntimeError(f"{self.path} does not exist")
 
         await send({"type": "http.response.body", "body": content})
         if self.background:
