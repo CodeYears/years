@@ -18,12 +18,17 @@ class URL:
 
             if query_string:
                 url += "?" + query_string
+            else:
+                url += "/" if not url.endswith("/") else ""
 
         self._url = url
 
     def __str__(self):
         return self._url
 
+    def __eq__(self, value):
+        return value == self._url
+        
     @property
     def components(self):
         if not hasattr(self, "_components"):
