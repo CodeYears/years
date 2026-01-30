@@ -5,7 +5,7 @@ import asyncio
 import inspect
 
 from years.requests import Request
-from years.exceptions import HTTPException
+from years.responses import Response
 
 
 def request_response(endpoint: typing.Callable):
@@ -116,7 +116,7 @@ class Mount(BaseRoute):
             scope["path"] = path[res.span()[-1] :]  # noqa
             return Mathched.FULL, scope
         else:
-            return Mathched.PARTICAL, scope
+            return Mathched.NONE, {}
 
     async def __call__(self, scope, receive, send):
         if self.app:
@@ -128,7 +128,6 @@ class Mount(BaseRoute):
 class Router:
     def __init__(self, routes: list[Route] = None):
         self.routes = routes or []
-        self.partical = False
 
     def route(self, path: str, methods=None):
         if methods is None:
@@ -147,6 +146,8 @@ class Router:
         self.routes.append(mount)
 
     async def __call__(self, scope, receive, send):
+        partical = False
+
         for route in self.routes:
             ret, new_scope = route.matches(scope)
 
@@ -155,10 +156,12 @@ class Router:
                 break
 
             if ret is Mathched.PARTICAL:
-                self.partical = True
+                partical = True
 
         else:
-            if self.partical:
-                raise HTTPException(405, "方法不匹配")
+            if partical:
+                response = Response("方法不匹配", 405)
+                await response(scope, receive, send)
             else:
-                raise HTTPException(404, "路径找不到")
+                response = Response("路径找不到", 404)
+                await response(scope, receive, send)

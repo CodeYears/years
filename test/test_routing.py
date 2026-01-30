@@ -1,6 +1,6 @@
 import pytest
 
-from years.responses import Response
+from years.responses import Response, PlainTextResponse
 from years.routing import Router, Route, Mount
 from years.testclient import TestClient
 
@@ -63,3 +63,60 @@ async def test_router():
     response = await client.get("/")
     assert response.status_code == 200
     assert response.text == "Hello, world"
+
+    response = await client.post("/")
+    assert response.status_code == 405
+    assert response.text == "方法不匹配"
+
+    response = await client.get("/foo")
+    assert response.status_code == 404
+    assert response.text == "路径找不到"
+
+    response = await client.get("/users")
+    assert response.status_code == 200
+    assert response.text == "All users"
+
+    response = await client.get("/users/tomchristie")
+    assert response.status_code == 200
+    assert response.text == "User tomchristie"
+
+    response = await client.get("/users/me")
+    assert response.status_code == 200
+    assert response.text == "User fixed me"
+
+    response = await client.get("/users/nomatch")
+    assert response.status_code == 200
+    assert response.text == "User nomatch"
+
+    response = await client.get("/static/123")
+    assert response.status_code == 200
+    assert response.text == "xxxxx"
+
+
+@pytest.mark.asyncio
+async def test_router_add_route():
+    response = await client.get("/func")
+    assert response.status_code == 200
+    assert response.text == "Hello, world!"
+
+
+@pytest.mark.asyncio
+async def test_router_duplicate_path():
+    response = await client.post("/func")
+    assert response.status_code == 200
+    assert response.text == "Hello, POST!"
+
+
+ok = PlainTextResponse("OK")
+
+@pytest.mark.asyncio
+async def test_mount_urls():
+    mounted = Router([Mount("/users", app=ok)])
+    client = TestClient(mounted)
+    response = await client.get("/users")
+    assert response.status_code == 200
+    response = await client.get("/users")
+    assert response.url == "http://testserver/users"
+    assert (await client.get("/users/")).status_code == 200
+    assert (await client.get("/users/a")).status_code == 200
+    assert (await client.get("/usersa")).status_code == 404
