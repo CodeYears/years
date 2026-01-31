@@ -116,6 +116,8 @@ async def test_mount_urls():
     response = await client.get("/users")
     assert response.status_code == 200
     response = await client.get("/users")
+
+    # 为什么 response 里面还会有 url 呢？
     assert response.url == "http://testserver/users"
     assert (await client.get("/users/")).status_code == 200
     assert (await client.get("/users/a")).status_code == 200

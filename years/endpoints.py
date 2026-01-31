@@ -1,7 +1,7 @@
 from years.requests import Request
 
 
-class Endpoint:
+class HTTPEndpoint:
     def get_methods(self):
         return ["GET", "POST"]
 
