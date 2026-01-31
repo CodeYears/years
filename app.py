@@ -8,7 +8,7 @@ from years.responses import (
     FileResponse,
 )
 from years.requests import Request
-from years.endpoint import Endpoint
+from years.endpoints import Endpoint
 from years.background import BackgroundTask
 from years import Years
 from years.exceptions import HTTPException

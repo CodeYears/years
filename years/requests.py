@@ -1,7 +1,7 @@
 import json
 from urllib.parse import parse_qs
 from collections.abc import Mapping
-from years.datastructers import Hearders, QueryParams, URL, Cookie
+from years.datastructures import Hearders, QueryParams, URL, Cookie
 
 
 class ClientDisconnect(Exception):
@@ -30,6 +30,10 @@ class Request(Mapping):
     @property
     def method(self):
         return self["method"]
+
+    @property
+    def path_params(self):
+        return self._scope["path_params"]
 
     @property
     def state(self):

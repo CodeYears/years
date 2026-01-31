@@ -10,13 +10,11 @@ from years.responses import Response
 
 def request_response(endpoint: typing.Callable):
     async def wrapper(scope, receive, send):
-        is_async = inspect.iscoroutinefunction(endpoint) or (
-            not inspect.isclass(endpoint)
-            and inspect.iscoroutinefunction(getattr(endpoint, "__call__", None))
-        )
         request = Request(scope, receive)
 
-        if is_async:
+        if inspect.isclass(endpoint):
+            response = await endpoint()(request)
+        elif inspect.iscoroutinefunction(endpoint):
             response = await endpoint(request)
         else:
             response = await asyncio.to_thread(endpoint, request)

@@ -19,3 +19,6 @@ class BackgroundTask:
                 await func(*args, **kwargs)
             else:
                 await asyncio.to_thread(func, *args, **kwargs)
+
+
+BackgroundTasks = BackgroundTask
