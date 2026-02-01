@@ -1,0 +1,97 @@
+from years.datastructures import URL, Headers
+
+
+def test_url():
+    u = URL("https://example.org:123/path/to/somewhere?abc=123#anchor")
+    assert u.scheme == "https"
+    assert u.hostname == "example.org"
+    assert u.port == 123
+    assert u.netloc == "example.org:123"
+    assert u.username is None
+    assert u.password is None
+    assert u.path == "/path/to/somewhere"
+    assert u.query == "abc=123"
+    assert u.fragment == "anchor"
+
+    new = u.replace(scheme="http")
+    assert new == "http://example.org:123/path/to/somewhere?abc=123#anchor"
+    assert new.scheme == "http"
+
+    new = u.replace(port=None)
+    assert new == "https://example.org/path/to/somewhere?abc=123#anchor"
+    assert new.port is None
+
+    new = u.replace(hostname="example.com")
+    assert new == "https://example.com:123/path/to/somewhere?abc=123#anchor"
+    assert new.hostname == "example.com"
+
+
+def test_hidden_password():
+    u = URL("https://example.org/path/to/somewhere")
+    assert repr(u) == "URL('https://example.org/path/to/somewhere')"
+
+    u = URL("https://username@example.org/path/to/somewhere")
+    assert repr(u) == "URL('https://username@example.org/path/to/somewhere')"
+
+    u = URL("https://username:password@example.org/path/to/somewhere")
+    assert repr(u) == "URL('https://username:********@example.org/path/to/somewhere')"
+
+
+def test_url_from_scope():
+    u = URL(
+        scope={"path": "/path/to/somewhere", "query_string": b"abc=123", "headers": []}
+    )
+    assert u == "/path/to/somewhere?abc=123"
+    assert repr(u) == "URL('/path/to/somewhere?abc=123')"
+
+    u = URL(
+        scope={
+            "scheme": "https",
+            "server": ("example.org", 123),
+            "path": "/path/to/somewhere",
+            "query_string": b"abc=123",
+            "headers": [],
+        }
+    )
+    assert u == "https://example.org:123/path/to/somewhere?abc=123"
+    assert repr(u) == "URL('https://example.org:123/path/to/somewhere?abc=123')"
+
+    u = URL(
+        scope={
+            "scheme": "https",
+            "server": ("example.org", 443),
+            "path": "/path/to/somewhere",
+            "query_string": b"abc=123",
+            "headers": [],
+        }
+    )
+    assert u == "https://example.org/path/to/somewhere?abc=123"
+    assert repr(u) == "URL('https://example.org/path/to/somewhere?abc=123')"
+
+
+def test_headers():
+    h = Headers(raw=[(b"a", b"123"), (b"a", b"456"), (b"b", b"789")])
+    assert "a" in h
+    assert "A" in h
+    assert "b" in h
+    assert "B" in h
+    assert "c" not in h
+    assert h["a"] == "123"
+    assert h.get("a") == "123"
+    assert h.get("nope", default=None) is None
+    assert h.getlist("a") == ["123", "456"]
+    assert h.keys() == ["a", "a", "b"]
+    assert h.values() == ["123", "456", "789"]
+    assert h.items() == [("a", "123"), ("a", "456"), ("b", "789")]
+    assert list(h) == ["a", "a", "b"]
+    assert dict(h) == {"a": "123", "b": "789"}
+    assert repr(h) == "Headers(raw=[(b'a', b'123'), (b'a', b'456'), (b'b', b'789')])"
+    assert h == Headers(raw=[(b"a", b"123"), (b"b", b"789"), (b"a", b"456")])
+    assert h != [(b"a", b"123"), (b"A", b"456"), (b"b", b"789")]
+
+    h = Headers({"a": "123", "b": "789"})
+    assert h["A"] == "123"
+    assert h["B"] == "789"
+    assert h.raw == [(b"a", b"123"), (b"b", b"789")]
+    assert repr(h) == "Headers({'a': '123', 'b': '789'})"
+
