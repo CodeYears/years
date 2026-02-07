@@ -5,7 +5,7 @@ import mimetypes
 import pathlib
 from email.utils import formatdate
 
-from years.datastructures import Hearders
+from years.datastructures import Headers
 
 
 class Response:
@@ -26,7 +26,7 @@ class Response:
         self.background = background
 
         # 实例化 headers 要放到上面，因为 init_headers 方法有可能会被重载
-        self.headers = Hearders(headers)
+        self.headers = Headers(headers)
         self.init_headers()
 
     def init_headers(self):
@@ -47,7 +47,7 @@ class Response:
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": self.headers.get_list(),
+                "headers": self.headers.raw,
             }
         )
 
@@ -91,7 +91,7 @@ class StreamingResponse(Response):
         if media_type:
             self.media_type = media_type
         self.background = background
-        self.headers = Hearders(headers)
+        self.headers = Headers(headers)
         self.init_headers()
 
     async def __call__(self, scope, receive, send):
@@ -99,7 +99,7 @@ class StreamingResponse(Response):
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": self.headers.get_list(),
+                "headers": self.headers.raw,
             }
         )
 
@@ -138,7 +138,7 @@ class FileResponse(Response):
         if filename:
             self.filename = filename
         self.background = background
-        self.headers = Hearders(headers)
+        self.headers = Headers(headers)
         self.init_headers()
 
     def init_headers(self):
@@ -166,7 +166,7 @@ class FileResponse(Response):
                 start = {
                     "type": "http.response.start",
                     "status": self.status_code,
-                    "headers": self.headers.get_list(),
+                    "headers": self.headers.raw,
                 }
                 await send(start)
         except IsADirectoryError:

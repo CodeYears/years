@@ -1,7 +1,7 @@
 import json
 from urllib.parse import parse_qs
 from collections.abc import Mapping
-from years.datastructures import Hearders, QueryParams, URL, Cookie
+from years.datastructures import Headers, QueryParams, URL, Cookie
 
 
 class ClientDisconnect(Exception):
@@ -45,7 +45,7 @@ class Request(Mapping):
     @property
     def url(self) -> URL:
         if not hasattr(self, "_url"):
-            self._url = URL(self._scope)
+            self._url = URL(scope=self._scope)
 
         return self._url
 
@@ -65,12 +65,8 @@ class Request(Mapping):
     @property
     def headers(self):
         if not hasattr(self, "_headers"):
-            self._headers = Hearders(self._scope["headers"])
+            self._headers = Headers(self._scope["headers"])
         return self._headers
-
-    @property
-    def path_params(self):
-        return self._scope["path_params"]
 
     async def stream(self):
         if hasattr(self, "_body"):

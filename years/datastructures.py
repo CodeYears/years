@@ -1,20 +1,29 @@
-from collections import defaultdict
+import re
 from collections.abc import Mapping, MutableMapping
-from urllib.parse import parse_qsl, unquote, urlparse
+from urllib.parse import parse_qsl, unquote, urlparse, urlunparse
 
 
 class URL:
-    def __init__(self, scope=None, url=None):
+    def __init__(self, url=None, scope: dict = None):
         assert not (scope and url), "构建不可以同时提供 url 和 scope 参数"
         if scope is not None:
-            host, port = scope["server"]
-            scheme = scope["scheme"]
-            path = unquote(scope["raw_path"])
+            host, port = scope.get("server", ("", None))
+            scheme = scope.get("scheme", "")
+            path = unquote(scope.get("path", ""))
             query_string = scope["query_string"].decode("utf-8")
-            if port is not None:
-                url = f"{scheme}://{host}:{port}{path}"
+
+            if port == 443:
+                port = None
+
+            if scheme:
+                url = f"{scheme}://"
             else:
-                url = f"{scheme}://{host}{path}"
+                url = ""
+
+            if port is not None:
+                url += f"{host}:{port}{path}"
+            else:
+                url += f"{host}{path}"
 
             if query_string:
                 url += "?" + query_string
@@ -26,9 +35,14 @@ class URL:
     def __str__(self):
         return self._url
 
+    def __repr__(self):
+        pattern = re.compile(r"(:)[^/]*?(@)")
+        url = pattern.sub(r"\1********\2", self._url)
+        return f"URL('{url}')"
+
     def __eq__(self, value):
         return value == self._url
-        
+
     @property
     def components(self):
         if not hasattr(self, "_components"):
@@ -37,11 +51,11 @@ class URL:
         return self._components
 
     @property
-    def sheme(self):
+    def scheme(self):
         return self.components.scheme
 
     @property
-    def host(self):
+    def hostname(self):
         return self.components.hostname
 
     @property
@@ -68,60 +82,118 @@ class URL:
     def netloc(self):
         return self.components.netloc
 
+    @property
+    def query(self):
+        return self.components.query
 
-class Hearders(MutableMapping):
-    def __init__(self, headers: list | dict = None):
-        """headers不止可以从 ASGI 框架传过来的列表构建
-        也可以从字典接口构建"""
-        self.raw_headers = self._init_headers(headers)
+    def replace(self, **kwargs):
+        kwargs = {k: "" if v is None else v for k, v in kwargs.items()}
 
-    def _init_headers(self, headers):
-        raw_headers = defaultdict(list)
+        if "hostname" in kwargs or "port" in kwargs:
+            hostname = kwargs["hostname"] if "hostname" in kwargs else self.hostname
+            port = kwargs["port"] if "port" in kwargs else self.port
 
-        if isinstance(headers, list):
-            for key, value in headers:
-                key, value = key.decode("latin-1").lower(), value.decode()
-                raw_headers[key].append(value)
+            if port:
+                netloc = f"{hostname}:{port}"
+            else:
+                netloc = f"{hostname}"
 
-        elif isinstance(headers, dict):
-            for key, value in headers.items():
-                if isinstance(key, bytes):
-                    key = key.decode("latin-1")
+            kwargs.update(dict(netloc=netloc))
 
-                raw_headers[key.lower()].append(value)
+        kwargs.pop("hostname", None)
+        kwargs.pop("port", None)
 
-        return raw_headers
+        components = self.components._replace(**kwargs)
+        return URL(urlunparse(components))
 
-    def __len__(self):
-        return len(self.raw_headers)
 
-    def __getitem__(self, key):
-        values = self.raw_headers[key]
-        return values[-1] if values else None
+class Headers(Mapping):
+    def __init__(
+        self, headers: dict[str, str] = None, raw: list[list[bytes, bytes]] = None
+    ):
+        self.headers = headers
+        if headers is not None:
+            self.raw = [
+                (key.lower().encode("latin-1"), value.encode("latin-1"))
+                for key, value in (headers or {}).items()
+            ]
+
+        else:
+            self.raw = raw or []
 
     def __iter__(self):
-        return iter(self.raw_headers)
+        return iter([key.decode("latin-1").lower() for key, _ in self.raw])
 
-    def __setitem__(self, key, value):
-        self.raw_headers[key] = [value]
+    @property
+    def scan(self):
+        return [
+            (key.decode("latin-1").lower(), value.decode("latin-1"))
+            for key, value in self.raw
+        ]
 
-    def append(self, key, value):
-        self.raw_headers[key].append(value)
+    def __contains__(self, name: str):
+        for key, _ in self.scan:
+            if key == name.lower():
+                return True
 
-    def __delitem__(self, key):
-        del self.raw_headers[key]
+        return False
 
-    def get_last(self, key):
-        values = self.get(key)
-        return values[-1] if values else None
+    def __getitem__(self, name: str):
+        for key, value in self.scan:
+            if key == name.lower():
+                return value
 
-    def get_list(self):
-        results = []
-        for key, values in self.raw_headers.items():
-            for value in values:
-                results.append([key.encode(), value.encode()])
+        raise KeyError(key)
 
-        return results
+    def __len__(self):
+        return len(self.raw)
+
+    def keys(self):
+        return [key for key, _ in self.scan]
+
+    def values(self):
+        return [value for _, value in self.scan]
+
+    def items(self):
+        return [(key, value) for key, value in self.scan]
+
+    def getlist(self, name: str):
+        values = []
+        for key, value in self.scan:
+            if key == name.lower():
+                values.append(value)
+
+        return values
+
+    def __repr__(self):
+        if self.headers is not None:
+            return f"Headers({self.headers})"
+
+        return f"Headers(raw={self.raw})"
+
+
+class MutableHeaders(Headers):
+    def __setitem__(self, name: str, value):
+        setted = False
+        for idx, (key, _) in enumerate(self.raw):
+            if key.decode("latin-1") == name.lower():
+                self.raw[idx] = (key, value.encode("latin-1"))
+                setted = True
+
+        if not setted:
+            self.raw.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+
+    def __delitem__(self, name: str):
+        for idx, (key, _) in enumerate(self.raw):
+            if key.decode("latin-1") == name.lower():
+                del self.raw[idx]
+
+    def setdefault(self, name: str, value):
+        for key, _ in self.raw:
+            if key.decode("latin-1") == name.lower():
+                break
+        else:
+            self.raw.append((name.lower().encode("latin-1"), value.encode("latin-1")))
 
 
 class QueryParams(Mapping):
