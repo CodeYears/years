@@ -1,4 +1,4 @@
-from years.datastructures import URL, Headers
+from years.datastructures import URL, Headers, MutableHeaders
 
 
 def test_url():
@@ -95,3 +95,18 @@ def test_headers():
     assert h.raw == [(b"a", b"123"), (b"b", b"789")]
     assert repr(h) == "Headers({'a': '123', 'b': '789'})"
 
+
+def test_mutable_headers():
+    h = MutableHeaders()
+    assert dict(h) == {}
+    h["a"] = "1"
+    assert dict(h) == {"a": "1"}
+    h["a"] = "2"
+    assert dict(h) == {"a": "2"}
+    h.setdefault("a", "3")
+    assert dict(h) == {"a": "2"}
+    h.setdefault("b", "4")
+    assert dict(h) == {"a": "2", "b": "4"}
+    del h["a"]
+    assert dict(h) == {"b": "4"}
+    assert h.raw == [(b"b", b"4")]

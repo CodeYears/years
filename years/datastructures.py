@@ -1,5 +1,4 @@
 import re
-from functools import lru_cache
 from collections.abc import Mapping, MutableMapping
 from urllib.parse import parse_qsl, unquote, urlparse, urlunparse
 
@@ -113,27 +112,24 @@ class Headers(Mapping):
         self, headers: dict[str, str] = None, raw: list[list[bytes, bytes]] = None
     ):
         self.headers = headers
-        if headers:
+        if headers is not None:
             self.raw = [
                 (key.lower().encode("latin-1"), value.encode("latin-1"))
-                for key, value in headers.items()
+                for key, value in (headers or {}).items()
             ]
 
         else:
-            self.raw = raw
+            self.raw = raw or []
 
     def __iter__(self):
         return iter([key.decode("latin-1").lower() for key, _ in self.raw])
 
     @property
     def scan(self):
-        if not hasattr(self, "_scan"):
-            self._scan = [
-                (key.decode("latin-1").lower(), value.decode("latin-1"))
-                for key, value in self.raw
-            ]
-
-        return self._scan
+        return [
+            (key.decode("latin-1").lower(), value.decode("latin-1"))
+            for key, value in self.raw
+        ]
 
     def __contains__(self, name: str):
         for key, _ in self.scan:
@@ -170,10 +166,34 @@ class Headers(Mapping):
         return values
 
     def __repr__(self):
-        if self.headers:
+        if self.headers is not None:
             return f"Headers({self.headers})"
 
         return f"Headers(raw={self.raw})"
+
+
+class MutableHeaders(Headers):
+    def __setitem__(self, name: str, value):
+        setted = False
+        for idx, (key, _) in enumerate(self.raw):
+            if key.decode("latin-1") == name.lower():
+                self.raw[idx] = (key, value.encode("latin-1"))
+                setted = True
+
+        if not setted:
+            self.raw.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+
+    def __delitem__(self, name: str):
+        for idx, (key, _) in enumerate(self.raw):
+            if key.decode("latin-1") == name.lower():
+                del self.raw[idx]
+
+    def setdefault(self, name: str, value):
+        for key, _ in self.raw:
+            if key.decode("latin-1") == name.lower():
+                break
+        else:
+            self.raw.append((name.lower().encode("latin-1"), value.encode("latin-1")))
 
 
 class QueryParams(Mapping):
