@@ -1,7 +1,8 @@
 import re
+from copy import deepcopy
 from collections import defaultdict
 from collections.abc import Mapping, MutableMapping
-from urllib.parse import parse_qsl, unquote, urlparse, urlunparse
+from urllib.parse import parse_qs, unquote, urlparse, urlunparse
 
 
 class URL:
@@ -201,11 +202,11 @@ class MutableHeaders(Headers):
 
 
 class QueryParams(Mapping):
-    def __init__(self, query_params: str | dict | list):
+    def __init__(self, query_params: str | dict | list = ""):
         self.raw = defaultdict(list)
 
         if isinstance(query_params, str):
-            self.raw.update(parse_qsl(query_params))
+            self.raw.update(parse_qs(query_params))
 
         elif isinstance(query_params, dict):
             for key, value in query_params.items():
@@ -214,7 +215,40 @@ class QueryParams(Mapping):
         elif isinstance(query_params, list):
             for key, value in query_params:
                 self.raw[key].append(value)
-    
+
+        elif isinstance(query_params, QueryParams):
+            self.raw = deepcopy(query_params.raw)
+
+    def __contains__(self, key):
+        return key in self.raw
+
+    def __getitem__(self, key):
+        if key not in self.raw:
+            raise KeyError(key)
+
+        return self.raw[key][-1]
+
+    def __len__(self):
+        return len(self.raw)
+
+    def __iter__(self):
+        return iter(self.raw.keys())
+
+    def getlist(self, key):
+        return self.raw[key]
+
+    def __str__(self):
+        pairs = []
+        for key, values in self.raw.items():
+            for value in values:
+                pairs.append(f"{key}={value}")
+
+        return "&".join(pairs)
+
+
+    def __repr__(self):
+        return f"QueryParams('{self}')"
+
 
 class Cookie(MutableMapping):
     def __init__(self, cookies: str = None):
