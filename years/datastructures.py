@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from collections.abc import Mapping, MutableMapping
 from urllib.parse import parse_qsl, unquote, urlparse, urlunparse
 
@@ -171,6 +172,9 @@ class Headers(Mapping):
 
         return f"Headers(raw={self.raw})"
 
+    def mutablecopy(self):
+        return MutableHeaders(raw=self.raw)
+
 
 class MutableHeaders(Headers):
     def __setitem__(self, name: str, value):
@@ -197,23 +201,20 @@ class MutableHeaders(Headers):
 
 
 class QueryParams(Mapping):
-    """查询参数先弄成只接受一个参数的，后面再弄多值映射"""
+    def __init__(self, query_params: str | dict | list):
+        self.raw = defaultdict(list)
 
-    def __init__(self, query_params: str):
-        d = dict(parse_qsl(query_params))
-        self._query_params = {
-            key.decode("latin-1"): value.decode("latin-1") for key, value in d.items()
-        }
+        if isinstance(query_params, str):
+            self.raw.update(parse_qsl(query_params))
 
-    def __getitem__(self, key):
-        return self._query_params[key]
+        elif isinstance(query_params, dict):
+            for key, value in query_params.items():
+                self.raw[key].append(value)
 
-    def __len__(self):
-        return len(self._query_params)
-
-    def __iter__(self):
-        return iter(self._query_params)
-
+        elif isinstance(query_params, list):
+            for key, value in query_params:
+                self.raw[key].append(value)
+    
 
 class Cookie(MutableMapping):
     def __init__(self, cookies: str = None):
