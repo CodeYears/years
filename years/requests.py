@@ -65,7 +65,7 @@ class Request(Mapping):
     @property
     def headers(self):
         if not hasattr(self, "_headers"):
-            self._headers = Headers(self._scope["headers"])
+            self._headers = Headers(raw=self._scope["headers"])
         return self._headers
 
     async def stream(self):
