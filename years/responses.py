@@ -5,7 +5,7 @@ import mimetypes
 import pathlib
 from email.utils import formatdate
 
-from years.datastructures import Headers
+from years.datastructures import MutableHeaders
 
 
 class Response:
@@ -26,7 +26,7 @@ class Response:
         self.background = background
 
         # 实例化 headers 要放到上面，因为 init_headers 方法有可能会被重载
-        self.headers = Headers(headers)
+        self.headers = MutableHeaders(headers)
         self.init_headers()
 
     def init_headers(self):
@@ -37,10 +37,10 @@ class Response:
             self.headers["Content-Length"] = str(len(self.content))
 
     def set_cookie(self, key, value):
-        self.headers.raw_headers["Set-Cookie"].append(f"{key}={value}")
+        self.headers["Set-Cookie"] = f"{key}={value}"
 
     def delete_cookie(self, key):
-        self.headers.raw_headers["Set-Cookie"] = []
+        del self.headers["Set-Cookie"]
 
     async def __call__(self, scope, receive, send):
         await send(
@@ -91,7 +91,7 @@ class StreamingResponse(Response):
         if media_type:
             self.media_type = media_type
         self.background = background
-        self.headers = Headers(headers)
+        self.headers = MutableHeaders(headers)
         self.init_headers()
 
     async def __call__(self, scope, receive, send):
@@ -138,7 +138,7 @@ class FileResponse(Response):
         if filename:
             self.filename = filename
         self.background = background
-        self.headers = Headers(headers)
+        self.headers = MutableHeaders(headers)
         self.init_headers()
 
     def init_headers(self):

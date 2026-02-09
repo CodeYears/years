@@ -205,6 +205,9 @@ class QueryParams(Mapping):
     def __init__(self, query_params: str | dict | list = ""):
         self.raw = defaultdict(list)
 
+        if isinstance(query_params, bytes):
+            query_params = query_params.decode()
+
         if isinstance(query_params, str):
             self.raw.update(parse_qs(query_params))
 
