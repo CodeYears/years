@@ -248,7 +248,6 @@ class QueryParams(Mapping):
 
         return "&".join(pairs)
 
-
     def __repr__(self):
         return f"QueryParams('{self}')"
 
@@ -274,3 +273,14 @@ class Cookie(MutableMapping):
 
     def __delitem__(self, key):
         del self._cookie[key]
+
+
+class Secret:
+    def __init__(self, secret):
+        self._secret = secret
+
+    def __repr__(self):
+        return "Secret('**********')"
+
+    def __str__(self):
+        return self._secret
