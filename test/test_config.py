@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from years.config import Config
-from years.datastructures import URL
+from years.config import Config, Environ, EnvironError
+from years.datastructures import URL, Secret
 
 
 def test_config(tmpdir, monkeypatch):
@@ -22,6 +22,7 @@ def test_config(tmpdir, monkeypatch):
     DATABASE_URL = config("DATABASE_URL", cast=URL)
     REQUEST_TIMEOUT = config("REQUEST_TIMEOUT", cast=int, default=10)
     REQUEST_HOSTNAME = config("REQUEST_HOSTNAME")
+    SECRET_KEY = config("SECRET_KEY", cast=Secret)
     assert config("BOOL_AS_INT", cast=bool) is False
 
     assert DEBUG is True
@@ -30,6 +31,8 @@ def test_config(tmpdir, monkeypatch):
     assert DATABASE_URL.username == "user"
     assert REQUEST_TIMEOUT == 10
     assert REQUEST_HOSTNAME == "example.com"
+    assert repr(SECRET_KEY) == "Secret('**********')"
+    assert str(SECRET_KEY) == "12345"
 
     with pytest.raises(KeyError):
         config.get("MISSING")
@@ -49,3 +52,28 @@ def test_config(tmpdir, monkeypatch):
     monkeypatch.setenv("BOOL_AS_INT", "2")
     with pytest.raises(ValueError):
         config.get("BOOL_AS_INT", cast=bool)
+
+
+def test_environ():
+    environ = Environ()
+
+    # We can mutate the environ at this point.
+    environ["TESTING"] = "True"
+    environ["GONE"] = "123"
+    del environ["GONE"]
+
+    # We can read the environ.
+    assert environ["TESTING"] == "True"
+    assert "GONE" not in environ
+
+    # We cannot mutate these keys now that we've read them.
+    with pytest.raises(EnvironError):
+        environ["TESTING"] = "False"
+
+    with pytest.raises(EnvironError):
+        del environ["GONE"]
+
+    # Test coverage of abstract methods for MutableMapping.
+    environ = Environ()
+    assert list(iter(environ)) == list(iter(os.environ))
+    assert len(environ) == len(os.environ)

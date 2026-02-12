@@ -59,3 +59,38 @@ class Config:
 
     def get(self, name: str, cast=None, default=None):
         return self(name, cast, default)
+
+
+class EnvironError(Exception):
+    """环境变量键异常"""
+
+
+class Environ:
+    def __init__(self):
+        self.freeze = set()
+
+    def __len__(self):
+        return len(os.environ)
+
+    def __setitem__(self, name: str, value):
+        if name in self.freeze:
+            raise EnvironError(name)
+
+        os.environ[name] = value
+
+    def __getitem__(self, name: str):
+        try:
+            value = os.environ[name]
+            self.freeze.add(name)
+            return value
+        except KeyError:
+            raise EnvironError(name)
+
+    def __iter__(self):
+        return iter(os.environ.keys())
+
+    def __delitem__(self, name: str):
+        try:
+            del os.environ[name]
+        except KeyError:
+            raise EnvironError(name)
